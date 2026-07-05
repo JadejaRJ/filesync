@@ -235,7 +235,7 @@ private fun ProtocolDropdown(selected: ProtocolType, onSelected: (ProtocolType) 
                 .fillMaxWidth()
                 .menuAnchor(),
         )
-        androidx.compose.material3.ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             listOf(ProtocolType.SFTP, ProtocolType.FTP).forEach { protocol ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(protocol.name) },

@@ -168,7 +168,7 @@ private fun DropdownField(options: List<String>, selected: String, onSelected: (
                 .fillMaxWidth()
                 .menuAnchor(),
         )
-        androidx.compose.material3.ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(option) },

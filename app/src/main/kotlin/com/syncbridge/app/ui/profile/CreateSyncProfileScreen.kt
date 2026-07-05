@@ -190,7 +190,7 @@ private fun ConnectionDropdown(
                 .fillMaxWidth()
                 .menuAnchor(),
         )
-        androidx.compose.material3.ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             connections.forEach { connection ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(connection.name) },
@@ -254,7 +254,7 @@ private fun GenericDropdown(options: List<String>, selected: String, onSelected:
                 .fillMaxWidth()
                 .menuAnchor(),
         )
-        androidx.compose.material3.ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(option) },

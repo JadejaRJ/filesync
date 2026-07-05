@@ -47,6 +47,11 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // SSHJ pulls in the split BouncyCastle jars (bcprov/bcutil/bcpkix), each of which ships the
+        // same multi-release metadata files; keep one copy of each to avoid a merge conflict.
+        resources.excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        resources.pickFirsts += "/META-INF/versions/**"
+        resources.excludes += "/META-INF/{BCKEY.SF,BCKEY.DSA,BC2048KE.SF,BC2048KE.DSA}"
     }
 }
 
