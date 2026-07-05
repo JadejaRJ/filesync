@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">SyncBridge</string>
+
+    <string name="notification_channel_sync_id">syncbridge_sync_channel</string>
+    <string name="notification_channel_sync_name">Sync activity</string>
+    <string name="notification_channel_alerts_id">syncbridge_alerts_channel</string>
+    <string name="notification_channel_alerts_name">Sync alerts</string>
+
+    <string name="ftp_insecure_warning">FTP sends your username, password, and files without encryption. Anyone on the same network could intercept them. Use SFTP or FTPS whenever possible.</string>
+    <string name="mirror_mode_warning">Mirror mode makes the destination an exact copy of the source, including deleting files that don\'t exist on the source. This cannot be undone for files without a recycle bin.</string>
+</resources>
