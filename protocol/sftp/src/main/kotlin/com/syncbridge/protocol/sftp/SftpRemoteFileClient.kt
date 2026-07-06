@@ -73,16 +73,36 @@ class SftpRemoteFileClient(
         } catch (e: SocketTimeoutException) {
             throw AppError.ConnectionTimeout(e)
         } catch (e: TransportException) {
+            runCatching { client.disconnect() }
             throw resolveHostKeyError(e, storedFingerprint)
+        } catch (e: java.io.IOException) {
+            // Connection reset, no route to host, broken pipe during the SSH handshake, etc. —
+            // none of the more specific subclasses above, but still a reachability/transport failure.
+            runCatching { client.disconnect() }
+            throw AppError.HostUnreachable(config.host, e)
         }
 
-        if (config.keepAlive) {
-            client.connection.keepAlive.keepAliveInterval = 30
+        // Trust-on-first-use: the verifier accepted an as-yet-unknown host key above (returning true so
+        // the handshake could complete); now that we're connected, remember its fingerprint so every
+        // subsequent connection is verified strictly and a *changed* key hard-fails as a mismatch.
+        val issue = lastHostKeyIssue
+        if (config.hostKeyVerification is HostKeyVerification.StrictKnownHosts && issue is HostKeyIssue.Unknown) {
+            runCatching { knownHostsStore.storeFingerprint(config.host, config.port, issue.fingerprint) }
         }
 
         try {
+            if (config.keepAlive) {
+                client.connection.keepAlive.keepAliveInterval = 30
+            }
             authenticate(client)
+        } catch (e: AppError) {
+            runCatching { client.disconnect() }
+            throw e
         } catch (e: UserAuthException) {
+            runCatching { client.disconnect() }
+            throw AppError.AuthFailed(e.message, e)
+        } catch (e: Exception) {
+            runCatching { client.disconnect() }
             throw AppError.AuthFailed(e.message, e)
         }
 
@@ -105,6 +125,8 @@ class SftpRemoteFileClient(
             ConnectionTestResult(success = true, message = "Connected successfully", serverIdentification = sshClient?.transport?.serverVersion)
         } catch (e: AppError) {
             ConnectionTestResult(success = false, message = e.userMessage)
+        } catch (e: Exception) {
+            ConnectionTestResult(success = false, message = e.message ?: "Could not connect to the server.")
         } finally {
             disconnect()
         }
@@ -292,12 +314,23 @@ class SftpRemoteFileClient(
             HostKeyVerification.StrictKnownHosts -> object : HostKeyVerifier {
                 override fun verify(hostname: String, port: Int, key: PublicKey): Boolean {
                     val fingerprint = SecurityUtils.getFingerprint(key)
-                    lastHostKeyIssue = when {
-                        storedFingerprint == null -> HostKeyIssue.Unknown(fingerprint)
-                        storedFingerprint != fingerprint -> HostKeyIssue.Mismatch(storedFingerprint, fingerprint)
-                        else -> null
+                    return when {
+                        // First time we've seen this host: accept and remember (trust-on-first-use). The
+                        // caller stores the fingerprint after the handshake completes; from then on any
+                        // *changed* key is rejected below as a mismatch.
+                        storedFingerprint == null -> {
+                            lastHostKeyIssue = HostKeyIssue.Unknown(fingerprint)
+                            true
+                        }
+                        storedFingerprint != fingerprint -> {
+                            lastHostKeyIssue = HostKeyIssue.Mismatch(storedFingerprint, fingerprint)
+                            false
+                        }
+                        else -> {
+                            lastHostKeyIssue = null
+                            true
+                        }
                     }
-                    return lastHostKeyIssue == null
                 }
 
                 override fun findExistingAlgorithms(hostname: String, port: Int): List<String> = emptyList()
@@ -313,7 +346,11 @@ class SftpRemoteFileClient(
         return when (val issue = lastHostKeyIssue) {
             is HostKeyIssue.Unknown -> AppError.HostKeyUnknown(config.host, issue.fingerprint)
             is HostKeyIssue.Mismatch -> AppError.HostKeyMismatch(config.host, issue.expected, issue.actual)
-            null -> AppError.Unknown(e.message, e)
+            // A transport-level failure that isn't about the host key at all: SSH banner/version
+            // exchange or key-exchange/algorithm negotiation failed (e.g. the port isn't an SSH
+            // server, or the server offers no algorithm SSHJ accepts). Surface it as a connection
+            // failure rather than the generic sync-worded "unknown" error.
+            null -> AppError.ServerClosedConnection(e)
         }
     }
 

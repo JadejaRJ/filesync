@@ -209,7 +209,7 @@ sealed class AppError(
 
     class Unknown(detail: String?, cause: Throwable? = null) : AppError(
         code = "UNKNOWN_ERROR",
-        userMessage = "Something went wrong during sync.",
+        userMessage = "Something went wrong" + (if (detail != null) ": $detail" else "."),
         suggestedFix = "Check the logs for details and retry.",
         retryable = true,
         technicalDetail = detail,

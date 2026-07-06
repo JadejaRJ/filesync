@@ -124,6 +124,10 @@ class AddConnectionViewModel @Inject constructor(
                 client.testConnection()
             } catch (e: AppError) {
                 ConnectionTestResult(success = false, message = e.userMessage)
+            } catch (e: Exception) {
+                ConnectionTestResult(success = false, message = e.message ?: "Could not connect to the server.")
+            } finally {
+                runCatching { client.close() }
             }
             _state.update { it.copy(isTesting = false, testResult = result) }
         }

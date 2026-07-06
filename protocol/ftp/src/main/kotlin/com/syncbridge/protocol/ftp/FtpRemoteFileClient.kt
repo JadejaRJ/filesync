@@ -50,6 +50,9 @@ class FtpRemoteFileClient(
             throw AppError.HostUnreachable(config.host, e)
         } catch (e: SocketTimeoutException) {
             throw AppError.ConnectionTimeout(e)
+        } catch (e: java.io.IOException) {
+            runCatching { ftp.disconnect() }
+            throw AppError.HostUnreachable(config.host, e)
         }
 
         if (!FTPReply.isPositiveCompletion(ftp.replyCode)) {
@@ -88,6 +91,8 @@ class FtpRemoteFileClient(
             ConnectionTestResult(success = true, message = "Connected successfully", serverIdentification = systemType)
         } catch (e: AppError) {
             ConnectionTestResult(success = false, message = e.userMessage)
+        } catch (e: Exception) {
+            ConnectionTestResult(success = false, message = e.message ?: "Could not connect to the server.")
         } finally {
             disconnect()
         }

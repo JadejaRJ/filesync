@@ -37,6 +37,10 @@ class SavedConnectionsViewModel @Inject constructor(
                 client.testConnection()
             } catch (e: AppError) {
                 com.syncbridge.core.common.client.ConnectionTestResult(false, e.userMessage)
+            } catch (e: Exception) {
+                com.syncbridge.core.common.client.ConnectionTestResult(false, e.message ?: "Could not connect.")
+            } finally {
+                runCatching { client.close() }
             }
             connectionRepository.recordTestResult(id, result.success)
             _testingId.value = null
